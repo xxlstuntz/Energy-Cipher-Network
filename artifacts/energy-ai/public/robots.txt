@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /chat
+Disallow: /api/
+
+Sitemap: https://369ai.replit.app/sitemap.xml

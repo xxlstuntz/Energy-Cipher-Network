@@ -11,6 +11,10 @@ export default function Chat() {
   const { token, isAuthenticated, isLoading, alias, vibrationLevel, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
+
+  useEffect(() => {
+    document.title = `The Field — 369 AI${alias ? ` · ${alias}` : ""}`;
+  }, [alias]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not authenticated

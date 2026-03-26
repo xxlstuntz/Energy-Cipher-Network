@@ -9,6 +9,10 @@ import { MysticalButton } from "@/components/ui/MysticalButton";
 export default function Enter() {
   const [location, setLocation] = useLocation();
   const { setToken, isAuthenticated } = useAuth();
+
+  React.useEffect(() => {
+    document.title = "Enter the Field — 369 AI";
+  }, []);
   
   const [inviteCode, setInviteCode] = useState("");
   const [alias, setAlias] = useState("");
