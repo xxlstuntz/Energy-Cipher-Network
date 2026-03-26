@@ -1,15 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: 369 Energy AI API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication and invite flow
+  - name: chat
+    description: AI Chat operations
 paths:
   /healthz:
     get:
@@ -24,6 +27,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/verify-test:
+    post:
+      operationId: verifyEnergyTest
+      tags: [auth]
+      summary: Verify the 369 energy test
+      description: Validates the user's answers to the numerology/energy test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnergyTestSubmission"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnergyTestResult"
+        "400":
+          description: Invalid submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/claim-invite:
+    post:
+      operationId: claimInvite
+      tags: [auth]
+      summary: Claim an invite code
+      description: Validates an invite code and creates a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimInviteRequest"
+      responses:
+        "200":
+          description: Invite claimed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimInviteResponse"
+        "400":
+          description: Invalid or expired invite code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/session:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Get current session
+      description: Returns the current user session if valid
+      responses:
+        "200":
+          description: Session info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionInfo"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/message:
+    post:
+      operationId: sendMessage
+      tags: [chat]
+      summary: Send a message to the AI
+      description: Send a message and receive an AI response about energy, numbers, and vibration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageRequest"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/history:
+    get:
+      operationId: getChatHistory
+      tags: [chat]
+      summary: Get chat history
+      description: Returns the user's conversation history
+      responses:
+        "200":
+          description: Chat history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatHistory"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: clearChatHistory
+      tags: [chat]
+      summary: Clear chat history
+      description: Clears the user's conversation history
+      responses:
+        "200":
+          description: Chat history cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +175,157 @@ components:
       required:
         - status
 
+    EnergyTestSubmission:
+      type: object
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                type: string
+              answer:
+                type: string
+            required:
+              - questionId
+              - answer
+      required:
+        - answers
+
+    EnergyTestResult:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        score:
+          type: number
+        inviteCode:
+          type: string
+          nullable: true
+        message:
+          type: string
+        vibrationLevel:
+          type: string
+      required:
+        - passed
+        - score
+        - message
+        - vibrationLevel
+
+    ClaimInviteRequest:
+      type: object
+      properties:
+        inviteCode:
+          type: string
+        alias:
+          type: string
+          description: Optional name/alias for the session
+      required:
+        - inviteCode
+
+    ClaimInviteResponse:
+      type: object
+      properties:
+        sessionToken:
+          type: string
+        alias:
+          type: string
+        message:
+          type: string
+      required:
+        - sessionToken
+        - alias
+        - message
+
+    SessionInfo:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        alias:
+          type: string
+        vibrationLevel:
+          type: string
+      required:
+        - valid
+        - alias
+        - vibrationLevel
+
+    ChatMessageRequest:
+      type: object
+      properties:
+        message:
+          type: string
+        sessionToken:
+          type: string
+      required:
+        - message
+        - sessionToken
+
+    ChatMessageResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        energySignature:
+          type: string
+          description: A short numerological signature tied to the response
+        timestamp:
+          type: string
+      required:
+        - reply
+        - energySignature
+        - timestamp
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        energySignature:
+          type: string
+        timestamp:
+          type: string
+      required:
+        - id
+        - role
+        - content
+        - timestamp
+
+    ChatHistory:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+      required:
+        - messages
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message

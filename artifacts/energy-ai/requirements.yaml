@@ -1,0 +1,17 @@
+packages:
+  "framer-motion": "Required for the mystical, fluid energy animations and page transitions"
+  "lucide-react": "Icons for the chat and navigation"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes safely"
+
+images:
+  - path: "artifacts/energy-ai/public/images/cosmic-bg.png"
+    description: "Deep cosmic dark space background with electric violet nebulae, subtle golden sacred geometry lines (like Sri Yantra or Metatron's Cube), very dark and premium, no text"
+    aspect_ratio: "16:9"
+  - path: "artifacts/energy-ai/public/images/tesla-coil.png"
+    description: "Mystical glowing abstract representation of the numbers 3, 6, 9 connected by electric violet and gold energy arcs, dark background, highly detailed 3D render"
+    aspect_ratio: "1:1"
+
+notes:
+  - "The app relies on @workspace/api-client-react for all API interactions."
+  - "Session token is stored in localStorage and passed to protected endpoints."

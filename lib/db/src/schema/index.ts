@@ -1,20 +1,41 @@
-// Export your models here. Add one export per file
-// export * from "./posts";
-//
-// Each model/table should ideally be split into different files.
-// Each model/table should define a Drizzle table, insert schema, and types:
-//
-//   import { pgTable, text, serial } from "drizzle-orm/pg-core";
-//   import { createInsertSchema } from "drizzle-zod";
-//   import { z } from "zod/v4";
-//
-//   export const postsTable = pgTable("posts", {
-//     id: serial("id").primaryKey(),
-//     title: text("title").notNull(),
-//   });
-//
-//   export const insertPostSchema = createInsertSchema(postsTable).omit({ id: true });
-//   export type InsertPost = z.infer<typeof insertPostSchema>;
-//   export type Post = typeof postsTable.$inferSelect;
+import { pgTable, text, serial, boolean, timestamp, integer, uuid } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
 
-export {}
+export const inviteCodesTable = pgTable("invite_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  used: boolean("used").notNull().default(false),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertInviteCodeSchema = createInsertSchema(inviteCodesTable).omit({ id: true, createdAt: true });
+export type InsertInviteCode = z.infer<typeof insertInviteCodeSchema>;
+export type InviteCode = typeof inviteCodesTable.$inferSelect;
+
+export const sessionsTable = pgTable("sessions", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  alias: text("alias").notNull(),
+  vibrationLevel: text("vibration_level").notNull().default("Seeker"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastActiveAt: timestamp("last_active_at").notNull().defaultNow(),
+});
+
+export const insertSessionSchema = createInsertSchema(sessionsTable).omit({ id: true, createdAt: true, lastActiveAt: true });
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Session = typeof sessionsTable.$inferSelect;
+
+export const chatMessagesTable = pgTable("chat_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sessionId: integer("session_id").notNull().references(() => sessionsTable.id),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  energySignature: text("energy_signature"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessagesTable).omit({ createdAt: true });
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessagesTable.$inferSelect;
