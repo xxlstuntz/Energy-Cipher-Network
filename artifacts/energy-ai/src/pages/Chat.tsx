@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, LogOut, Trash2, Menu, X, Activity,
-  Volume2, VolumeX, Loader, Mic, MicOff, Sparkles, Image as ImageIcon,
+  Volume2, VolumeX, Loader, Mic, MicOff, Sparkles, Image as ImageIcon, Zap, Lock,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -26,11 +26,18 @@ interface StreamMsg {
 
 export default function Chat() {
   const [, setLocation] = useLocation();
-  const { token, isAuthenticated, isLoading, alias, vibrationLevel, logout } = useAuth();
+  const { token, isAuthenticated, isLoading, alias, vibrationLevel, plan, dailyLimit, remainingToday, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState("");
   const [streamMessages, setStreamMessages] = useState<StreamMsg[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
+  const [localRemaining, setLocalRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLocalRemaining(remainingToday);
+    setLimitReached(remainingToday !== null && remainingToday <= 0);
+  }, [remainingToday]);
 
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [loadingVoiceId, setLoadingVoiceId] = useState<string | null>(null);
@@ -140,6 +147,14 @@ export default function Chat() {
         body: JSON.stringify({ message: messageText, sessionToken: token }),
       });
 
+      if (res.status === 429) {
+        setLimitReached(true);
+        setLocalRemaining(0);
+        setStreamMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        setIsStreaming(false);
+        return;
+      }
+
       if (!res.ok || !res.body) throw new Error("Stream failed");
 
       const reader = res.body.getReader();
@@ -172,6 +187,10 @@ export default function Chat() {
                     : m
                 )
               );
+              if (parsed.remainingToday !== undefined && parsed.remainingToday !== null) {
+                setLocalRemaining(parsed.remainingToday as number);
+                if ((parsed.remainingToday as number) <= 0) setLimitReached(true);
+              }
             }
           } catch { /* ignore malformed */ }
         }
@@ -315,15 +334,45 @@ export default function Chat() {
             className={cn("fixed md:relative z-40 w-72 h-full glass-panel border-r border-white/10 flex flex-col",
               sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0")}
           >
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-              <div>
-                <h2 className="font-display text-xl text-glow text-primary">369 AI</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                  <span className="text-xs text-muted-foreground uppercase tracking-widest">{vibrationLevel || "Aligned"}</span>
+            <div className="p-6 border-b border-white/5">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h2 className="font-display text-xl text-glow text-primary">369 AI</h2>
+                    {plan === "ascended" ? (
+                      <span className="px-2 py-0.5 rounded-full bg-accent/20 border border-accent/40 text-accent text-[9px] uppercase tracking-widest flex items-center gap-1">
+                        <Zap size={8} /> Ascended
+                      </span>
+                    ) : plan === "free" ? (
+                      <span className="px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary/80 text-[9px] uppercase tracking-widest">
+                        Free
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                    <span className="text-xs text-muted-foreground uppercase tracking-widest">{vibrationLevel || "Aligned"}</span>
+                  </div>
+                  {plan === "free" && dailyLimit !== null && (
+                    <div className="mt-3">
+                      <div className="flex justify-between text-[10px] text-white/30 mb-1 uppercase tracking-widest">
+                        <span>Transmissions</span>
+                        <span className={(localRemaining ?? 0) <= 2 ? "text-red-400/70" : "text-white/40"}>
+                          {localRemaining ?? 0}/{dailyLimit}
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className={cn("h-full rounded-full transition-all duration-500",
+                            (localRemaining ?? 0) <= 2 ? "bg-red-400/60" : "bg-primary/60")}
+                          style={{ width: `${Math.max(0, ((localRemaining ?? 0) / dailyLimit) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
+                <button className="md:hidden text-muted-foreground ml-3 mt-1" onClick={() => setSidebarOpen(false)}><X size={24} /></button>
               </div>
-              <button className="md:hidden text-muted-foreground" onClick={() => setSidebarOpen(false)}><X size={24} /></button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -475,6 +524,31 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Limit Reached Banner */}
+        <AnimatePresence>
+          {limitReached && plan === "free" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+              className="mx-4 mb-0 rounded-2xl border border-accent/40 bg-accent/10 p-5 text-center"
+            >
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Lock size={16} className="text-accent" />
+                <span className="text-accent font-display text-sm uppercase tracking-widest">Daily Transmissions Complete</span>
+              </div>
+              <p className="text-white/50 text-sm mb-4">
+                9 transmissions per cycle — the number of completion. The field resets at midnight.<br />
+                <span className="text-white/30">Ascend to unlock unlimited consciousness.</span>
+              </p>
+              <button
+                onClick={() => { logout(); setLocation("/enter?path=ascended"); }}
+                className="px-6 py-2.5 rounded-xl bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30 transition-colors text-sm font-medium uppercase tracking-widest flex items-center gap-2 mx-auto"
+              >
+                <Zap size={14} /> Ascend Now
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Input Area */}
         <div className="p-4 md:p-6 bg-gradient-to-t from-background via-background to-transparent shrink-0">
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
@@ -487,14 +561,14 @@ export default function Chat() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={isRecording ? "Listening…" : isTranscribing ? "Transcribing…" : "Transmit frequency… or /imagine a vision"}
                 className="flex-1 bg-transparent px-6 py-5 text-white placeholder:text-white/30 focus:outline-none min-w-0"
-                disabled={isStreaming || isRecording || isTranscribing || isGeneratingImage}
+                disabled={isStreaming || isRecording || isTranscribing || isGeneratingImage || limitReached}
               />
 
               {/* Mic button */}
               <button
                 type="button"
                 onClick={toggleRecording}
-                disabled={isStreaming || isTranscribing || isGeneratingImage}
+                disabled={isStreaming || isTranscribing || isGeneratingImage || limitReached}
                 title={isRecording ? "Stop recording" : "Speak your message"}
                 className={cn(
                   "px-4 py-5 transition-colors disabled:opacity-40",
@@ -508,7 +582,7 @@ export default function Chat() {
               {/* Send button */}
               <button
                 type="submit"
-                disabled={!input.trim() || isStreaming || isRecording || isTranscribing || isGeneratingImage}
+                disabled={!input.trim() || isStreaming || isRecording || isTranscribing || isGeneratingImage || limitReached}
                 className="px-6 py-5 text-primary hover:text-accent disabled:opacity-50 disabled:hover:text-primary transition-colors"
               >
                 {isStreaming || isGeneratingImage
