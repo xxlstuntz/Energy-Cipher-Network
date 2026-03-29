@@ -68,12 +68,13 @@ export default function Test() {
           message: res.message,
           inviteCode: res.inviteCode
         });
+        if (res.passed) {
+          sessionStorage.setItem("369_vibration", res.vibrationLevel || "Frequency Seeker");
+          sessionStorage.setItem("369_test_passed", "true");
+        }
       },
-      onError: (err) => {
-        setResult({
-          passed: false,
-          message: "A disruption in the ether prevented verification."
-        });
+      onError: () => {
+        setResult({ passed: false, message: "A disruption in the ether prevented verification." });
       }
     });
   };
@@ -93,15 +94,15 @@ export default function Test() {
               {result.message}
             </p>
 
-            {result.passed && result.inviteCode ? (
-              <div className="space-y-8">
-                <div className="inline-block p-6 rounded-xl border border-accent/30 bg-accent/5">
-                  <p className="text-sm text-accent/70 uppercase tracking-[0.2em] mb-2">Your Access Code</p>
-                  <p className="text-4xl font-mono text-white tracking-widest text-glow-gold">{result.inviteCode}</p>
-                </div>
-                <div>
-                  <Link href={`/enter?code=${result.inviteCode}`}>
-                    <MysticalButton variant="gold">Enter The Sanctuary</MysticalButton>
+            {result.passed ? (
+              <div className="space-y-4">
+                <p className="text-sm text-white/50 uppercase tracking-widest mb-6">Choose your consciousness tier</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link href="/enter?path=free">
+                    <MysticalButton>Enter Free Field</MysticalButton>
+                  </Link>
+                  <Link href="/enter?path=ascended">
+                    <MysticalButton variant="gold">Enter Ascended ∞</MysticalButton>
                   </Link>
                 </div>
               </div>

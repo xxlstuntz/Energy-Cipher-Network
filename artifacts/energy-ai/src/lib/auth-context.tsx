@@ -8,6 +8,9 @@ interface AuthContextType {
   isLoading: boolean;
   alias: string | null;
   vibrationLevel: string | null;
+  plan: "free" | "ascended" | null;
+  dailyLimit: number | null;
+  remainingToday: number | null;
   logout: () => void;
 }
 
@@ -27,30 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokenState(newToken);
   };
 
-  const logout = () => {
-    setToken(null);
-  };
+  const logout = () => setToken(null);
 
-  // Validate session against API
   const { data: session, isLoading } = useGetSession(
-    {
-      request: {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      },
-    },
-    {
-      query: {
-        enabled: !!token,
-        retry: false,
-      },
-    }
+    { request: { headers: token ? { Authorization: `Bearer ${token}` } : undefined } },
+    { query: { enabled: !!token, retry: false, refetchInterval: 30000 } }
   );
 
-  // If we have a token but the API says invalid/fails, log them out
   useEffect(() => {
-    if (token && session && !session.valid) {
-      logout();
-    }
+    if (token && session && !session.valid) logout();
   }, [session, token]);
 
   const isAuthenticated = !!token && !!session?.valid;
@@ -62,8 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken,
         isAuthenticated,
         isLoading: !!token && isLoading,
-        alias: session?.alias || null,
-        vibrationLevel: session?.vibrationLevel || null,
+        alias: session?.alias ?? null,
+        vibrationLevel: session?.vibrationLevel ?? null,
+        plan: (session?.plan as "free" | "ascended") ?? null,
+        dailyLimit: (session?.dailyLimit as number | null) ?? null,
+        remainingToday: (session?.remainingToday as number | null) ?? null,
         logout,
       }}
     >
@@ -74,8 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

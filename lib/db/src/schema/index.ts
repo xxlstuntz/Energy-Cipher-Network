@@ -8,6 +8,7 @@ export const inviteCodesTable = pgTable("invite_codes", {
   used: boolean("used").notNull().default(false),
   usedAt: timestamp("used_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  tier: text("tier").notNull().default("ascended"), // "free" | "ascended"
 });
 
 export const insertInviteCodeSchema = createInsertSchema(inviteCodesTable).omit({ id: true, createdAt: true });
@@ -19,6 +20,10 @@ export const sessionsTable = pgTable("sessions", {
   token: text("token").notNull().unique(),
   alias: text("alias").notNull(),
   vibrationLevel: text("vibration_level").notNull().default("Seeker"),
+  plan: text("plan").notNull().default("free"), // "free" | "ascended"
+  dailyMessages: integer("daily_messages").notNull().default(0),
+  lastMessageDate: text("last_message_date").default(""),
+  resonanceProfile: text("resonance_profile").default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastActiveAt: timestamp("last_active_at").notNull().defaultNow(),
 });
